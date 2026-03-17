@@ -3,7 +3,7 @@ function Move-Faceless {
     param(
         [Parameter(Mandatory, Position = 0)]
         [string]$Path,
-        [string]$Directory = "faceless"
+        [string]$Directory = "noface"
     )
 
     $dest = Join-Path $Path $Directory
