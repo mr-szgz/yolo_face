@@ -2,4 +2,4 @@
 python = "3.13.12"
 
 [env]
-_.path = ["./portable_python", "./portable_python/Scripts"]
+_.path = ["./portable_python", "./portable_python/Scripts", "C:\\Users\\shoji\\AppData\\Local\\Programs\\Inno Setup 6"]

@@ -3,6 +3,7 @@ portable_python/
 *.pt
 build/
 dist/
+installer/*.exe
 python-*.zip
 python-*.7z
 python-*.rar
@@ -33,3 +34,4 @@ pip-delete-this-directory.txt
 *~
 .env
 .cache/
+*.lnk
