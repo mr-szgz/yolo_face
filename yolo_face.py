@@ -10,6 +10,8 @@ def main():
     parser.add_argument("--conf", type=float, default=None)
     args = parser.parse_args()
     model = YOLO("yolov8n-oiv7.pt")
+    
+    # https://docs.ultralytics.com/usage/cfg/#predict-settings
     results = model.predict(
         source=args.source,
         conf=args.conf,
@@ -23,6 +25,7 @@ def main():
     labels = set()
     result = cls_id = None
 
+    # https://docs.ultralytics.com/modes/predict/#boxes
     for result in results:
         if result.boxes is not None and result.boxes.cls is not None:
             for cls_id in result.boxes.cls:

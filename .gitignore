@@ -1,3 +1,6 @@
 get-pip.py
 portable_python/
 *.pt
+build/
+dist/
+python-*.zip
