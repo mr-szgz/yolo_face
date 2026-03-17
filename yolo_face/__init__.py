@@ -1,14 +1,12 @@
 import argparse
 import os
-import sys
-import tomllib
+from importlib.metadata import version
 from pathlib import Path
 
 from ultralytics import YOLO
 
 
-with open(Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent.parent)) / "pyproject.toml", "rb") as _f:
-    __version__ = tomllib.load(_f)["project"]["version"]
+__version__ = version("yolo_face")
 
 # model name -> supported label class ids (cls_id names)
 MODELS = [
@@ -24,11 +22,14 @@ def get_data_dir() -> Path:
 
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    parser.add_argument("source")
-    parser.add_argument("conf", type=float, default=None)
+    parser = argparse.ArgumentParser(prog="yolo_face", description=f"yolo_face {__version__}")
+    parser.add_argument("source", nargs="?", default=None, help="image file, directory, URL, glob, or video to run inference on (alias: -Source)")
+    parser.add_argument("-Source", dest="source_alt", default=None, help=argparse.SUPPRESS)
+    parser.add_argument("conf", nargs="?", type=float, default=0.25, help="minimum confidence threshold for detections (default: 0.25) (alias: -Confidence)")
+    parser.add_argument("-Confidence", dest="conf_alt", type=float, default=None, help=argparse.SUPPRESS)
     args = parser.parse_args()
+    args.source = args.source_alt or args.source
+    args.conf = args.conf_alt if args.conf_alt is not None else args.conf
     
     model_name, classes = MODELS[0]
 
