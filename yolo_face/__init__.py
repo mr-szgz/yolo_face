@@ -1,5 +1,6 @@
 import argparse
 import os
+import sys
 from importlib.metadata import version
 from pathlib import Path
 
@@ -23,13 +24,11 @@ def get_data_dir() -> Path:
 
 def main():
     parser = argparse.ArgumentParser(prog="yolo_face", description=f"yolo_face {__version__}")
-    parser.add_argument("source", nargs="?", default=None, help="image file, directory, URL, glob, or video to run inference on (alias: -Source)")
-    parser.add_argument("-Source", dest="source_alt", default=None, help=argparse.SUPPRESS)
-    parser.add_argument("conf", nargs="?", type=float, default=0.25, help="minimum confidence threshold for detections (default: 0.25) (alias: -Confidence)")
-    parser.add_argument("-Confidence", dest="conf_alt", type=float, default=None, help=argparse.SUPPRESS)
+    parser.add_argument("source", help="image file, directory, URL, glob, video or any source supported by ultralytics")
+    parser.add_argument("--conf", nargs="?", type=float, default=0.25, help="minimum confidence threshold for detections (default: 0.25)")
+    parser.add_argument("--check", action="store_true", help="exit 0 if any labels found, exit 1 if none (no other output)")
+    parser.add_argument("--check-not", action="store_true", help="exit 0 if no labels found, exit 1 if any (no other output)")
     args = parser.parse_args()
-    args.source = args.source_alt or args.source
-    args.conf = args.conf_alt if args.conf_alt is not None else args.conf
     
     model_name, classes = MODELS[0]
 
@@ -59,6 +58,12 @@ def main():
                 labels.add(result.names[int(cls_id)])
 
     del results, result, cls_id
+
+    if args.check:
+        sys.exit(0 if labels else 1)
+
+    if args.check_not:
+        sys.exit(1 if labels else 0)
 
     for label in sorted(labels):
         print(label)
