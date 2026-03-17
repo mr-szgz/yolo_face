@@ -24,9 +24,10 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_REPO: ${{ vars.HF_PORTABLE_PYTHON_REPO }}
+          HF_ARCHIVE: ${{ vars.HF_PORTABLE_PYTHON_ARCHIVE }}
         run: |
           $ErrorActionPreference = 'Stop'
-          $archive = "portable-python-win-amd64.7z"
+          $archive = $env:HF_ARCHIVE
           $url = "https://huggingface.co/$env:HF_REPO/resolve/main/$archive"
           $headers = @{}
           if ($env:HF_TOKEN) {
@@ -38,6 +39,19 @@ jobs:
           7z x $archive
           Remove-Item $archive
           Write-Host "portable_python ready"
+
+      - name: Validate tag matches pyproject.toml version
+        shell: pwsh
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          $expected = (Select-String -Path pyproject.toml -Pattern '^version\s*=\s*"(.+)"').Matches.Groups[1].Value
+          $tag = $env:TAG_NAME -replace '^v'
+          if ($tag -ne $expected) {
+            Write-Error "Tag '$env:TAG_NAME' does not match pyproject.toml version '$expected'"
+            exit 1
+          }
+          Write-Host "Version $expected confirmed"
 
       - name: Build with PyInstaller
         shell: pwsh

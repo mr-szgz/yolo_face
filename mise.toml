@@ -1,2 +1,5 @@
 [tools]
 python = "3.13.12"
+
+[env]
+_.path = ["./portable_python", "./portable_python/Scripts"]

@@ -1,47 +1,42 @@
-[CmdletBinding()]
-param()
-$VerbosePreference = 'Continue'
-$InformationPreference = 'Continue'
+# Verify host system meets portable_python runtime requirements
+# Asserts: nvidia-smi present, driver CUDA >= bundled CUDA, torch sees GPU
+$ErrorActionPreference = 'Stop'
 
-# Check if CUDA 12 is installed
-if ($env:CUDA_PATH) {
-    Write-Verbose "CUDA Path: $env:CUDA_PATH"
-} else {
-    $cudaBasePath = "C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA"
-    if (Test-Path $cudaBasePath) {
-        $v12Dirs = Get-ChildItem -Path $cudaBasePath -Directory -Name -Filter "v12*" | Sort-Object -Descending | Select-Object -First 1
-        if ($v12Dirs) {
-            $cudaPath = Join-Path $cudaBasePath $v12Dirs
-            Write-Verbose "CUDA Path: $cudaPath"
-        } else {
-            Write-Warning "CUDA 12 is not installed"
-        }
-    } else {
-        Write-Warning "CUDA 12 is not installed"
-    }
-}
+$Prefix = Join-Path $PSScriptRoot "portable_python"
+$pyExe  = Join-Path $Prefix "python.exe"
 
-# Check CUDA using nvidia-smi
-try {
-    $nvidiaInfo = & nvidia-smi --query-gpu=name,driver_version,compute_cap --format=csv,noheader 2>$null
-    if ($nvidiaInfo) {
-        Write-Verbose $nvidiaInfo
-    } else {
-        Write-Warning "NVIDIA GPU not found"
-    }
-} catch {
-    Write-Error "nvidia-smi command failed. Ensure NVIDIA drivers are installed and accessible in PATH."
-}
+function Write-Found  { param([string]$key, [string]$val) Write-Host ("-- {0,-20} {1}" -f $key, $val) }
+function Write-Fatal  { param([string]$msg) Write-Host "-- FATAL: $msg" -ForegroundColor Red; throw $msg }
 
-# Check torch version and CUDA availability
-$pythonPath = Join-Path (Get-Location) "portable_python\python.exe"
-if (Test-Path $pythonPath) {
-    try {
-        $torchInfo = & $pythonPath -c "import torch; print('PyTorch version:', torch.__version__); print('CUDA available:', torch.cuda.is_available())" 2>$null
-        Write-Verbose $torchInfo
-    } catch {
-        Write-Error "Failed to check PyTorch. Ensure torch is installed in portable_python."
-    }
-} else {
-    Write-Error "portable_python/python.exe not found at: $pythonPath"
+if (-not (Test-Path $pyExe)) { Write-Fatal "portable_python not found — run Install.ps1 first" }
+
+# --- gather facts ---
+$torchVer = & $pyExe -c "import torch; print(torch.__version__)" 2>&1
+$cuVer    = & $pyExe -c "import torch; print(torch.version.cuda)" 2>&1
+if (-not $cuVer -or $cuVer -match 'Error|None') { Write-Fatal "torch reports no CUDA build" }
+
+$rows = & nvidia-smi --query-gpu=name,driver_version,compute_cap --format=csv,noheader 2>&1
+if ($LASTEXITCODE -ne 0) { Write-Fatal "nvidia-smi failed: $rows" }
+
+$smiHeader = (& nvidia-smi 2>&1) -join "`n"
+if ($smiHeader -notmatch 'CUDA Version:\s*([\d.]+)') { Write-Fatal "could not parse driver CUDA version" }
+$driverCuda = $Matches[1]
+
+# --- report ---
+Write-Host ""
+Write-Found "Torch:" $torchVer
+foreach ($row in $rows) {
+    $name, $driver, $cc = ($row -split ',\s*')
+    Write-Found "GPU:" "$name  compute $cc"
 }
+Write-Found "CUDA:" "$cuVer (driver $driverCuda)"
+
+# --- assert ---
+if ([version]$driverCuda -lt [version]$cuVer) {
+    Write-Fatal "driver CUDA $driverCuda < bundled $cuVer — update NVIDIA driver"
+}
+$torchCuda = & $pyExe -c "import torch; assert torch.cuda.is_available(), 'torch cannot see GPU'" 2>&1
+if ($LASTEXITCODE -ne 0) { Write-Fatal "torch GPU check failed: $torchCuda" }
+
+Write-Host "-- OK" -ForegroundColor Green
+Write-Host ""

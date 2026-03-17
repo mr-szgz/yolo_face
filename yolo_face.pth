@@ -1,0 +1,1 @@
+import pathlib, sys; sys.path.insert(0, str(pathlib.Path(sys.prefix).parent))

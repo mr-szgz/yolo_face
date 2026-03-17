@@ -19,27 +19,31 @@ jobs:
         run: .\Install.ps1
 
       - name: Create 7z archive
+        id: bundle
         shell: pwsh
         run: |
-          7z a -t7z -mx=9 portable-python-win-amd64.7z portable_python
+          .\Bundle.ps1
+          $archive = Get-Item portable_python-*.7z | Select-Object -First 1
+          "archive=$($archive.Name)" >> $env:GITHUB_OUTPUT
 
       - name: Set up Python for HuggingFace CLI
         uses: actions/setup-python@v5
         with:
-          python-version: "3.x"
+          python-version: "3.13.12"
 
       - name: Upload to HuggingFace Hub
         shell: pwsh
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
           HF_REPO: ${{ vars.HF_PORTABLE_PYTHON_REPO }}
+          ARCHIVE: ${{ steps.bundle.outputs.archive }}
         run: |
           pip install huggingface-hub
-          huggingface-cli upload $env:HF_REPO portable-python-win-amd64.7z --repo-type model
+          huggingface-cli upload $env:HF_REPO $env:ARCHIVE --repo-type model
 
       - name: Upload artifact as backup
         uses: actions/upload-artifact@v4
         with:
-          name: portable-python-win-amd64
-          path: portable-python-win-amd64.7z
+          name: portable-python
+          path: portable_python-*.7z
           retention-days: 30

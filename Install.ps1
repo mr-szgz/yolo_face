@@ -1,8 +1,9 @@
 # isolate environment to portable python
 $Prefix = Join-Path $PSScriptRoot "\portable_python"
-$env:PATH = "$Prefix;$env:PATH;"
+$env:PATH = "$Prefix;$Prefix\Scripts;$env:PATH;"
 $env:PYTHONNOUSERSITE=1;
 $env:PYTHONPATH=""
+$env:PIP_NO_WARN_SCRIPT_LOCATION=1
 
 # download portable python if missing
 if (-not (Test-Path $Prefix)) {
@@ -17,13 +18,9 @@ if (-not (Test-Path $Prefix)) {
     Expand-Archive -Path "python-3.13.12-embed-$Arch.zip" -DestinationPath $Prefix
 }
 
-# ensure "import site" is enabled in the ._pth file
-$pthFile = Join-Path $Prefix "python313._pth"
-$pthLines = Get-Content $pthFile
-$lastLine = ($pthLines | Where-Object { $_.Trim() -ne '' } | Select-Object -Last 1)
-if ($lastLine -ne 'import site') {
-    Add-Content -Path $pthFile -Value 'import site'
-}
+# configure embedded python: enable site, add project root to sys.path
+Copy-Item (Join-Path $PSScriptRoot "python313._pth") (Join-Path $Prefix "python313._pth")
+Copy-Item (Join-Path $PSScriptRoot "yolo_face.pth") (Join-Path $Prefix "Lib\site-packages\yolo_face.pth")
 
 $pyExe = Join-Path $Prefix "python.exe"
 
@@ -33,10 +30,11 @@ if ($LASTEXITCODE -ne 0) {
     $getPip = Join-Path $PSScriptRoot "get-pip.py"
     & $pyExe $getPip
 }
+# install #1 is for sys packges
 & $pyExe -m pip install pip --upgrade
 
-# install torch cuda 12.8+
-& $pyExe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 --upgrade --no-warn-script-location
+# install #2 is torch for cuda
+& $pyExe -m pip install ".[cuda,dev]"
 
-# install ultralytics + build tools
-& $pyExe -m pip install ultralytics pyinstaller --upgrade --no-warn-script-location
+# install #3 is app depdencies
+& $pyExe -m pip install . --upgrade

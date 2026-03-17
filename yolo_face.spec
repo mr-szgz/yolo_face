@@ -1,10 +1,10 @@
 # -*- mode: python ; coding: utf-8 -*-
 
 a = Analysis(
-    ["yolo_face.py"],
+    ["yolo_face/__main__.py"],
     pathex=[],
     binaries=[],
-    datas=[],
+    datas=[("pyproject.toml", ".")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},

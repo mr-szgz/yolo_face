@@ -1,0 +1,27 @@
+[project]
+name = "yolo_face"
+version = "0.1.0"
+description = "Detect and classify faces in images and video using YOLOv8"
+requires-python = ">=3.11"
+dependencies = [
+    "ultralytics",
+]
+
+[project.optional-dependencies]
+cuda = [
+    "torch",
+    "torchvision",
+    "torchaudio",
+]
+dev = [
+    "pyinstaller",
+]
+
+[tool.yolo-face.cuda]
+index-url = "https://download.pytorch.org/whl/cu128"
+
+[project.scripts]
+yolo_face = "yolo_face:main"
+
+[tool.setuptools]
+packages = ["yolo_face"]
