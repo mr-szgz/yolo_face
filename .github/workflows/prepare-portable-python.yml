@@ -1,0 +1,45 @@
+name: Prepare Portable Python
+
+on:
+  workflow_dispatch:
+
+concurrency:
+  group: prepare-portable-python
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build portable Python environment
+        shell: pwsh
+        run: .\Install.ps1
+
+      - name: Create 7z archive
+        shell: pwsh
+        run: |
+          7z a -t7z -mx=9 portable-python-win-amd64.7z portable_python
+
+      - name: Set up Python for HuggingFace CLI
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - name: Upload to HuggingFace Hub
+        shell: pwsh
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_REPO: ${{ vars.HF_PORTABLE_PYTHON_REPO }}
+        run: |
+          pip install huggingface-hub
+          huggingface-cli upload $env:HF_REPO portable-python-win-amd64.7z --repo-type model
+
+      - name: Upload artifact as backup
+        uses: actions/upload-artifact@v4
+        with:
+          name: portable-python-win-amd64
+          path: portable-python-win-amd64.7z
+          retention-days: 30

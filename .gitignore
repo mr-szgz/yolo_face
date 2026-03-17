@@ -4,3 +4,4 @@ portable_python/
 build/
 dist/
 python-*.zip
+examples/

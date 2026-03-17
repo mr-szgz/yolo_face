@@ -1,0 +1,57 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download portable Python from HuggingFace
+        shell: pwsh
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          HF_REPO: ${{ vars.HF_PORTABLE_PYTHON_REPO }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $archive = "portable-python-win-amd64.7z"
+          $url = "https://huggingface.co/$env:HF_REPO/resolve/main/$archive"
+          $headers = @{}
+          if ($env:HF_TOKEN) {
+            $headers["Authorization"] = "Bearer $env:HF_TOKEN"
+          }
+          Write-Host "Downloading $url ..."
+          Invoke-WebRequest -Uri $url -OutFile $archive -Headers $headers
+          Write-Host "Extracting ..."
+          7z x $archive
+          Remove-Item $archive
+          Write-Host "portable_python ready"
+
+      - name: Build with PyInstaller
+        shell: pwsh
+        run: .\Make.ps1
+
+      - name: Package release artifact
+        shell: pwsh
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          Compress-Archive -Path dist\yolo_face\* -DestinationPath "yolo_face-${env:TAG_NAME}-windows-amd64.zip"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: yolo_face-*.zip
+          generate_release_notes: true

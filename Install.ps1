@@ -27,13 +27,16 @@ if ($lastLine -ne 'import site') {
 
 $pyExe = Join-Path $Prefix "python.exe"
 
-# install pip if missing
-# Invoke-WebRequest -Uri 'https://bootstrap.pypa.io/get-pip.py' -OutFile get-pip.py
-# & $pyExe get-pip.py
+# bootstrap pip (embedded Python ships without it)
+& $pyExe -m pip --version 2>$null
+if ($LASTEXITCODE -ne 0) {
+    $getPip = Join-Path $PSScriptRoot "get-pip.py"
+    & $pyExe $getPip
+}
 & $pyExe -m pip install pip --upgrade
 
 # install torch cuda 12.8+
 & $pyExe -m pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu128 --upgrade --no-warn-script-location
 
-# installs ultralytics
-& $pyExe -m pip install ultralytics --upgrade --no-warn-script-location
+# install ultralytics + build tools
+& $pyExe -m pip install ultralytics pyinstaller --upgrade --no-warn-script-location
