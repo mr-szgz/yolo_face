@@ -1,6 +1,6 @@
 [project]
 name = "yolo_face"
-version = "0.1.0"
+version = "0.2.0"
 description = "Detect and classify faces in images and video using YOLOv8"
 requires-python = ">=3.11"
 dependencies = [
