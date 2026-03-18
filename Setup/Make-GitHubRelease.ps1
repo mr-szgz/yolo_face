@@ -91,6 +91,13 @@ function Format-ByteSize {
     return "{0:N0} B" -f $Bytes
 }
 
+$installSnippetPath = Join-Path $PSScriptRoot "Release-InstallSnippet.md"
+$installSnippet = ""
+
+if (Test-Path $installSnippetPath) {
+    $installSnippet = ((Get-Content -Path $installSnippetPath -Raw).Trim()) -replace '<version>', $Version
+}
+
 $releaseNotes = @(
     "**Download from HuggingFace Bucket**"
     ""
@@ -104,6 +111,8 @@ $releaseNotes = @(
 
         "- [$($_.Platform) $($_.Arch) $($_.Abi)]($($_.PublicUrl)) ($sizeLabel)"
     })
+    ""
+    $installSnippet
 ) -join "`n"
 
 if ($PSCmdlet.ShouldProcess($tag, "Ensure git tag exists on origin")) {
