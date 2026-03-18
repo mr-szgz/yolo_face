@@ -6,6 +6,14 @@ param (
     [ValidateNotNullOrEmpty()]
     [string]$Bucket = "mr-szgz/yolo_face",
 
+    [string]$Version,
+
+    [string]$Platform,
+
+    [string]$Arch,
+
+    [string]$Abi,
+
     [switch]$Force
 )
 
@@ -27,10 +35,24 @@ if (-not $Force.IsPresent) {
 foreach ($zipFile in Get-ChildItem -Path dist -File -Filter "yolo_face-*.zip") {
     $match = [regex]::Match($zipFile.Name, '^yolo_face-(?<Version>.+)-(?<Platform>[^-]+)-(?<Arch>[^-]+)-(?<Abi>[^.]+)\.zip$')
 
+    if (-not $match.Success) {
+        continue
+    }
+
     $version = $match.Groups["Version"].Value
     $platform = $match.Groups["Platform"].Value
     $arch = $match.Groups["Arch"].Value
     $abi = $match.Groups["Abi"].Value
+
+    if (
+        ($Version -and $version -ne $Version) -or
+        ($Platform -and $platform -ne $Platform) -or
+        ($Arch -and $arch -ne $Arch) -or
+        ($Abi -and $abi -ne $Abi)
+    ) {
+        continue
+    }
+
     $key = "$version/$platform/$($zipFile.Name)"
     $bucketUri = "hf://buckets/$Bucket/$key"
 

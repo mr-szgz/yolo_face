@@ -35,40 +35,9 @@ if (-not $Force.IsPresent) {
     }
 }
 
-if ($StoredBinaries.Count -eq 0) {
-    $StoredBinaries = @(
-        foreach ($zipFile in Get-ChildItem -Path dist -File -Filter "yolo_face-$Version-*.zip") {
-            $match = [regex]::Match($zipFile.Name, '^yolo_face-(?<Version>.+)-(?<Platform>[^-]+)-(?<Arch>[^-]+)-(?<Abi>[^.]+)\.zip$')
-
-            if (-not $match.Success -or $match.Groups["Version"].Value -ne $Version) {
-                continue
-            }
-
-            $platform = $match.Groups["Platform"].Value
-            $arch = $match.Groups["Arch"].Value
-            $abi = $match.Groups["Abi"].Value
-            $key = "$Version/$platform/$($zipFile.Name)"
-
-            [pscustomobject]@{
-                Version = $Version
-                Platform = $platform
-                Arch = $arch
-                Abi = $abi
-                Key = $key
-                Size = $zipFile.Length
-                PublicUrl = "https://huggingface.co/buckets/$Bucket/$key"
-            }
-        }
-    )
-}
-
 $StoredBinaries = @(
     $StoredBinaries | Where-Object { $_.PSObject.Properties.Name -contains "PublicUrl" }
 )
-
-if ($StoredBinaries.Count -eq 0) {
-    throw "No stored binaries were provided and no matching 'dist/yolo_face-$Version-*.zip' archives were found."
-}
 
 function Format-ByteSize {
     param (
@@ -98,22 +67,40 @@ if (Test-Path $installSnippetPath) {
     $installSnippet = ((Get-Content -Path $installSnippetPath -Raw).Trim()) -replace '<version>', $Version
 }
 
-$releaseNotes = @(
-    "**Download from HuggingFace Bucket**"
-    ""
-    ($StoredBinaries | ForEach-Object {
-        $sizeLabel = if ($_.PSObject.Properties.Name -contains "Size") {
-            Format-ByteSize -Bytes $_.Size
-        }
-        else {
-            "size unknown"
-        }
+$releaseNoteSections = @()
 
-        "- [$($_.Platform) $($_.Arch) $($_.Abi)]($($_.PublicUrl)) ($sizeLabel)"
-    })
-    ""
-    $installSnippet
-) -join "`n"
+if ($StoredBinaries.Count -gt 0) {
+    $releaseNoteSections += @(
+        "**Download from HuggingFace Bucket**"
+        ""
+        (
+            ($StoredBinaries | ForEach-Object {
+                $sizeLabel = if ($_.PSObject.Properties.Name -contains "Size") {
+                    Format-ByteSize -Bytes $_.Size
+                }
+                else {
+                    "size unknown"
+                }
+
+                "- [$($_.Platform) $($_.Arch) $($_.Abi)]($($_.PublicUrl)) ($sizeLabel)"
+            }) -join "`n"
+        ).Trim()
+    )
+}
+
+if ($installSnippet) {
+    if ($releaseNoteSections.Count -gt 0) {
+        $releaseNoteSections += ""
+    }
+
+    $releaseNoteSections += $installSnippet
+}
+
+$releaseNotes = ($releaseNoteSections -join "`n").Trim()
+
+if (-not $releaseNotes) {
+    $releaseNotes = "Release $tag"
+}
 
 if ($PSCmdlet.ShouldProcess($tag, "Ensure git tag exists on origin")) {
     $localTagExists = $true
@@ -158,4 +145,5 @@ elseif ($PSCmdlet.ShouldProcess($tag, "Create GitHub release")) {
     Tag = $tag
     Bucket = $Bucket
     StoredBinaries = $StoredBinaries
+    Notes = $releaseNotes
 }

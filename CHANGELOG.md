@@ -7,16 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-03-18
+
 ### Added
 
 - `Setup/Store-Binary.ps1` and `Setup/Make-GitHubRelease.ps1` to publish Windows release archives to a Hugging Face bucket and create GitHub releases from those stored binaries.
 - `Setup/Bundle-PortablePython.ps1`, `Setup/INSTALL_PORTABLE.md`, `Setup/Release-InstallSnippet.md`, and `Setup/Validate-Gpu.ps1` to support the portable Windows distribution and keep release notes consistent.
+- `Setup/Sync-ReleaseBranch.ps1` to make branch sync reusable outside the full release flow.
 
 ### Changed
 
 - Reorganized packaging assets and release helpers under `Setup/`.
 - Updated `Install.ps1`, `mise.toml`, `pyproject.toml`, and GitHub workflows for the portable Python and bucket-backed release flow.
-- Updated GitHub release notes to include download links, human-readable archive sizes, and a reusable ZIP install snippet.
+- Updated `Setup/Make-Release.ps1` to work as a stage runner so install, build, sync, upload, and GitHub release steps can be invoked separately.
+- Updated `Setup/Make-GitHubRelease.ps1` to create or update releases without requiring bucket files and to only include download links when stored-binary metadata is provided.
+- Updated `Setup/Store-Binary.ps1` to target a specific version and platform tuple instead of uploading every matching archive in `dist`.
 
 ### Removed
 
@@ -69,7 +74,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Replaced the standalone `yolo_face.py` script with a package-based layout under `yolo_face/`.
 - Updated the build flow to clear previous output before packaging release artifacts.
 
-[unreleased]: https://github.com/mr-szgz/yolo_face/compare/v0.3.3...HEAD
+[unreleased]: https://github.com/mr-szgz/yolo_face/compare/v0.3.4...HEAD
+[0.3.4]: https://github.com/mr-szgz/yolo_face/compare/v0.3.3...v0.3.4
 [0.3.3]: https://github.com/mr-szgz/yolo_face/compare/d27ef04...v0.3.3
 [0.2.1]: https://github.com/mr-szgz/yolo_face/compare/v0.2.0...d27ef04
 [0.2.0]: https://github.com/mr-szgz/yolo_face/releases/tag/v0.2.0

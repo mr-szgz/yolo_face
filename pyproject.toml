@@ -2,7 +2,7 @@
 
 [project]
 name = "yolo_face"
-version = "0.3.3"
+version = "0.3.4"
 description = "Detect and classify face and human parts using YOLO"
 requires-python = ">=3.11"
 dependencies = [
