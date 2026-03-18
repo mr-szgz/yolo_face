@@ -22,7 +22,7 @@ jobs:
         id: bundle
         shell: pwsh
         run: |
-          .\Bundle.ps1
+          .\Setup\Bundle.ps1
           $archive = Get-Item portable_python-*.7z | Select-Object -First 1
           "archive=$($archive.Name)" >> $env:GITHUB_OUTPUT
 

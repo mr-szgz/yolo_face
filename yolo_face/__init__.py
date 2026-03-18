@@ -4,6 +4,7 @@ import sys
 from importlib.metadata import version
 from pathlib import Path
 
+import torch
 from ultralytics import YOLO
 
 
@@ -23,7 +24,15 @@ def get_data_dir() -> Path:
 
 
 def main():
-    parser = argparse.ArgumentParser(prog="yolo_face", description=f"yolo_face {__version__}")
+    parser = argparse.ArgumentParser(
+        prog="yolo_face",
+        description=(
+            f"yolo_face v{__version__} | "
+            f"torch {torch.__version__} | "
+            f"cuda {torch.cuda.is_available()}"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
     parser.add_argument("source", help="image file, directory, URL, glob, video or any source supported by ultralytics")
     parser.add_argument("--conf", nargs="?", type=float, default=0.25, help="minimum confidence threshold for detections (default: 0.25)")
     parser.add_argument("--check", action="store_true", help="exit 0 if any labels found, exit 1 if none (no other output)")

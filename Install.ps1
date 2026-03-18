@@ -1,40 +1,57 @@
-# isolate environment to portable python
-$Prefix = Join-Path $PSScriptRoot "\portable_python"
-$env:PATH = "$Prefix;$Prefix\Scripts;$env:PATH;"
-$env:PYTHONNOUSERSITE=1;
-$env:PYTHONPATH=""
-$env:PIP_NO_WARN_SCRIPT_LOCATION=1
+[CmdletBinding()]
+param (
+    [switch]$Gpu
+)
 
-# download portable python if missing
-if (-not (Test-Path $Prefix)) {
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+$PSNativeCommandUseErrorActionPreference = $true
+
+$env:PATH = "$(Join-Path $PSScriptRoot 'portable_python');$(Join-Path $PSScriptRoot 'portable_python\Scripts');$env:PATH;"
+$env:PYTHONNOUSERSITE = 1
+$env:PYTHONPATH = ""
+$env:PIP_NO_WARN_SCRIPT_LOCATION = 1
+
+if (-not (Test-Path (Join-Path $PSScriptRoot "portable_python\python.exe"))) {
     $Arch = switch ([System.Runtime.InteropServices.RuntimeInformation]::ProcessArchitecture) {
         "X64" { "amd64" }
         "X86" { "win32" }
         "Arm64" { "arm64" }
         default { "amd64" }
     }
- 
-    Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.13.12/python-3.13.12-embed-$Arch.zip" -OutFile "python-3.13.12-embed-$Arch.zip"
-    Expand-Archive -Path "python-3.13.12-embed-$Arch.zip" -DestinationPath $Prefix
+
+    if (-not (Test-Path (Join-Path $PSScriptRoot "python-3.13.12-embed-$Arch.zip"))) {
+        Invoke-WebRequest -Uri "https://www.python.org/ftp/python/3.13.12/python-3.13.12-embed-$Arch.zip" -OutFile (Join-Path $PSScriptRoot "python-3.13.12-embed-$Arch.zip")
+    }
+
+    New-Item -ItemType Directory -Path (Join-Path $PSScriptRoot "portable_python") -Force | Out-Null
+    Expand-Archive -Path (Join-Path $PSScriptRoot "python-3.13.12-embed-$Arch.zip") -DestinationPath (Join-Path $PSScriptRoot "portable_python") -Force
 }
 
-# configure embedded python: enable site, add project root to sys.path
-Copy-Item (Join-Path $PSScriptRoot "python313._pth") (Join-Path $Prefix "python313._pth")
-Copy-Item (Join-Path $PSScriptRoot "yolo_face.pth") (Join-Path $Prefix "Lib\site-packages\yolo_face.pth")
+New-Item -ItemType Directory -Path (Join-Path $PSScriptRoot "portable_python\Scripts") -Force | Out-Null
+New-Item -ItemType Directory -Path (Join-Path $PSScriptRoot "portable_python\Lib\site-packages") -Force | Out-Null
+Copy-Item (Join-Path $PSScriptRoot "Setup\python313._pth") (Join-Path $PSScriptRoot "portable_python\python313._pth") -Force
+Copy-Item (Join-Path $PSScriptRoot "Setup\yolo_face.pth") (Join-Path $PSScriptRoot "portable_python\Lib\site-packages\yolo_face.pth") -Force
 
-$pyExe = Join-Path $Prefix "python.exe"
+$hasPip = $false
 
-# bootstrap pip (embedded Python ships without it)
-& $pyExe -m pip --version 2>$null
-if ($LASTEXITCODE -ne 0) {
-    $getPip = Join-Path $PSScriptRoot "get-pip.py"
-    & $pyExe $getPip
+try {
+    & python -m pip --version 2>$null | Out-Null
+    $hasPip = ($LASTEXITCODE -eq 0)
 }
-# install #1 is for sys packges
-& $pyExe -m pip install pip --upgrade
+catch {
+    $hasPip = $false
+}
 
-# install #2 is torch for cuda
-& $pyExe -m pip install ".[cuda,dev]"
+if (-not $hasPip) {
+    & python -m ensurepip --upgrade
+}
 
-# install #3 is app depdencies
-& $pyExe -m pip install . --upgrade
+& python -m pip install --upgrade pip "setuptools>=70" wheel
+
+if ($Gpu) {
+    & python -m pip uninstall torch torchvision torchaudio --yes
+    & python -m pip install torch torchvision torchaudio --upgrade --index-url=https://download.pytorch.org/whl/cu128
+}
+
+& python -m pip install --upgrade .

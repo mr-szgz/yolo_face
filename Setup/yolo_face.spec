@@ -1,10 +1,13 @@
 # -*- mode: python ; coding: utf-8 -*-
+import os
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(SPEC), ".."))
 
 a = Analysis(
-    ["yolo_face/__main__.py"],
-    pathex=[],
+    [os.path.join(REPO_ROOT, "yolo_face", "__main__.py")],
+    pathex=[REPO_ROOT],
     binaries=[],
-    datas=[("pyproject.toml", ".")],
+    datas=[(os.path.join(REPO_ROOT, "pyproject.toml"), ".")],
     hiddenimports=[],
     hookspath=[],
     hooksconfig={},
